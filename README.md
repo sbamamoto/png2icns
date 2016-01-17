@@ -16,3 +16,5 @@ If you want to set the output folder an filename use the `-o` option.
 ``   java -jar png2icns.jar -i icon.png -o /Users/me/myapp``
 
 This will create the folder `/Users/me/myapp.iconset` and the file `/Users/me/myapp.icns`.
+
+The program needs the `iconutil` executable that comes with Xcode. You need to have XCode installed to use this program. Xcode is available from the AppStore.
