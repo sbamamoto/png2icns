@@ -40,9 +40,9 @@ public class Scaler {
             cl.append(i);
             cl.append(" ");
         }
-        
+
         String result = "";
-       
+
         ProcessBuilder builder = new ProcessBuilder(commandLine);
         Map<String, String> env = builder.environment();
         env.put("PATH", "/usr/sbin:/usr/bin:/sbin:/bin");
@@ -60,12 +60,12 @@ public class Scaler {
 
         boolean isProcessRunning = true;
         int maxRetries = 60;
-        
+
         do {
             try {
                 isProcessRunning = process.exitValue() < 0;
             } catch (IllegalThreadStateException ex) {
-                System.out.println ("Process not terminated. Waiting ...");
+                System.out.println("Process not terminated. Waiting ...");
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException iex) {
@@ -76,74 +76,115 @@ public class Scaler {
         } while (isProcessRunning && maxRetries > 0);
         System.out.println("Process has terminated");
         if (process.exitValue() != 0) {
-            throw new IllegalStateException("Exit value not equal to 0: "+result);
+            throw new IllegalStateException("Exit value not equal to 0: " + result);
         }
         if (maxRetries == 0 && isProcessRunning) {
             System.out.println("Process does not terminate. Try to kill the process now.");
             process.destroy();
         }
-        
+
         return result;
     }
-    
+
     public static void main(String[] args) {
 
         Options options = new Options();
         options.addOption("i", "input-filename", true, "Filename ofthe image containing the icon. The image should be a square with at least 1024x124 pixel in PNG format.");
         options.addOption("o", "iconset-foldername", true, "Name of the folder where the iconset will be stored. The extension .iconset will be added automatically.");
+        options.addOption("a", "android", false, "Android iconset creation");
+        options.addOption("m", "macos", false, "Mac OS iconset creation");
+        options.addOption("n", "android-name", true, "Icon name");
+
         String folderName;
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = null;
-        
+
         try {
             cmd = parser.parse(options, args);
             if (cmd.hasOption("i")) {
-                if (new File(cmd.getOptionValue("i")).isFile()) {
-                    
+                if (cmd.hasOption("m")) {
+                    if (new File(cmd.getOptionValue("i")).isFile()) {
+
+                        if (cmd.hasOption("o")) {
+                            folderName = cmd.getOptionValue("o");
+                        } else {
+                            folderName = "/tmp/noname.iconset";
+                        }
+
+                        if (!folderName.endsWith(".iconset")) {
+                            folderName = folderName + ".iconset";
+                        }
+                        new File(folderName).mkdirs();
+
+                        BufferedImage source = ImageIO.read(new File(cmd.getOptionValue("i")));
+                        BufferedImage resized = resize(source, 1024, 1024);
+                        save(resized, folderName + "/icon_512x512@2x.png");
+                        resized = resize(source, 512, 512);
+                        save(resized, folderName + "/icon_512x512.png");
+                        save(resized, folderName + "/icon_256x256@2x.png");
+
+                        resized = resize(source, 256, 256);
+                        save(resized, folderName + "/icon_256x256.png");
+                        save(resized, folderName + "/icon_128x128@2x.png");
+
+                        resized = resize(source, 128, 128);
+                        save(resized, folderName + "/icon_128x128.png");
+
+                        resized = resize(source, 64, 64);
+                        save(resized, folderName + "/icon_32x32@2x.png");
+
+                        resized = resize(source, 32, 32);
+                        save(resized, folderName + "/icon_32x32.png");
+                        save(resized, folderName + "/icon_16x16@2x.png");
+
+                        resized = resize(source, 16, 16);
+                        save(resized, folderName + "/icon_16x16.png");
+
+                        Scaler.runProcess(new String[]{"/usr/bin/iconutil", "-c", "icns", folderName});
+
+                    }
+                } else if (cmd.hasOption("a")) {
                     if (cmd.hasOption("o")) {
                         folderName = cmd.getOptionValue("o");
-                    }
-                    else {
-                        folderName = "/tmp/noname.iconset";
-                    }
-
-                    if (!folderName.endsWith(".iconset")) {
-                        folderName= folderName + ".iconset";
+                    } else {
+                        folderName = "/tmp/res";
                     }
                     new File(folderName).mkdirs();
+                    new File(folderName+"/mipmap-hdpi").mkdirs();
+                    new File(folderName+"/mipmap-mdpi").mkdirs();
+                    new File(folderName+"/mipmap-xhdpi").mkdirs();
+                    new File(folderName+"/mipmap-xxhdpi").mkdirs();
+                    new File(folderName+"/mipmap-xxxhdpi").mkdirs();
 
                     BufferedImage source = ImageIO.read(new File(cmd.getOptionValue("i")));
-                    BufferedImage resized = resize(source, 1024, 1024);
-                    save(resized, folderName+"/icon_512x512@2x.png");
-                    resized = resize(source, 512, 512);
-                    save(resized, folderName+"/icon_512x512.png");
-                    save(resized, folderName+"/icon_256x256@2x.png");
-
-                    resized = resize(source, 256, 256);
-                    save(resized, folderName+"/icon_256x256.png");
-                    save(resized, folderName+"/icon_128x128@2x.png");
-
-                    resized = resize(source, 128, 128);
-                    save(resized, folderName+"/icon_128x128.png");
-
-                    resized = resize(source, 64, 64);
-                    save(resized, folderName+"/icon_32x32@2x.png");
-
-                    resized = resize(source, 32, 32);
-                    save(resized, folderName+"/icon_32x32.png");
-                    save(resized, folderName+"/icon_16x16@2x.png");
-
-                    resized = resize(source, 16, 16);
-                    save(resized, folderName+"/icon_16x16.png");
+                    BufferedImage resized;
+                    String name = "ic_launcher";
+                    if (cmd.hasOption("n")) {
+                        name = cmd.getOptionValue("n");
+                    } 
                     
-                    Scaler.runProcess(new String[] {"/usr/bin/iconutil","-c","icns",folderName});
+                    resized = resize(source, 192, 192);
+                    save(resized, folderName + "/mipmap-xxxhdpi/"+name+".png");
+
+                    resized = resize(source, 144, 144);
+                    save(resized, folderName + "/mipmap-xxhdpi/"+name+".png");
+                    
+                    resized = resize(source, 96, 96);
+                    save(resized, folderName + "/mipmap-xhdpi/"+name+".png");
+
+                    resized = resize(source, 48, 48);
+                    save(resized, folderName + "/mipmap-mdpi/"+name+".png");
+                    
+                    resized = resize(source, 72, 72);
+                    save(resized, folderName + "/mipmap-hdpi/"+name+".png");
+                    
                 }
             }
 
         } catch (IOException e) {
-            System.out.println("Error reading image: "+ cmd.getOptionValue("i"));
+            System.out.println("Error reading image: " + cmd.getOptionValue("i"));
             e.printStackTrace();
-            
+
         } catch (ParseException ex) {
             Logger.getLogger(Scaler.class.getName()).log(Level.SEVERE, null, ex);
         }
